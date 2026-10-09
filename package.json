@@ -1,8 +1,9 @@
 {
-  "name": "luxbank-bot",
+  "name": "luxbank-telegram-bot",
   "version": "1.0.0",
-  "type": "module",
+  "description": "Telegram Sales Bot hosted on Netlify Functions",
+  "main": "netlify/functions/update.js",
   "dependencies": {
-    "node-telegram-bot-api": "^0.66.0"
+    "grammy": "^1.30.0"
   }
 }
