@@ -175,8 +175,12 @@
       "TRẦN MINH TUẤN", "LÊ HOÀNG NAM", "TRẦN LÊ NGUYÊN", "PHẠM QUỐC BẢO"
     ];
 
-    // Mảng các file QR của bạn
-    const qrFiles = ["IMG_0473.png", "nhh.png", "kn.png"];
+    // Các tên file QR có thể xảy ra
+    const qrGroups = [
+      ["IMG_0473.png", "img_0473.png", "IMG_0473.PNG", "IMG_0473.jpg"],
+      ["nhh.png", "NHH.png", "nhh.PNG", "NHH.PNG", "nhh.jpg", "NHH.jpg"],
+      ["kn.png", "KN.png", "kn.PNG", "KN.PNG", "kn.jpg", "KN.jpg"]
+    ];
 
     // Hàm tạo giá ngẫu nhiên từ 500.000₫ đến 900.000₫
     function getRandomPrice() {
@@ -234,17 +238,24 @@
 
       modalAmount.innerText = price;
       
-      // Chọn ngẫu nhiên 1 trong 3 file QR
-      const randomQR = qrFiles[Math.floor(Math.random() * qrFiles.length)];
-      
-      // Thêm đường dẫn ./ để trình duyệt load đúng từ thư mục gốc
-      qrImage.src = "./" + randomQR;
+      // Chọn ngẫu nhiên 1 nhóm file QR (IMG_0473, nhh, hoặc kn)
+      const selectedGroup = qrGroups[Math.floor(Math.random() * qrGroups.length)];
+      let attemptIndex = 0;
 
-      // Nếu file bị lỗi (ví dụ do viết hoa/thường tên file), tự thử load lại dạng chữ thường
+      function loadNextAttempt() {
+        if (attemptIndex < selectedGroup.length) {
+          qrImage.src = "./" + selectedGroup[attemptIndex];
+          attemptIndex++;
+        }
+      }
+
+      // Tự động thử đuôi viết hoa/thường khác nếu gặp lỗi load
       qrImage.onerror = function() {
-        this.onerror = null;
-        this.src = "./" + randomQR.toLowerCase();
+        loadNextAttempt();
       };
+
+      // Bắt đầu thử
+      loadNextAttempt();
 
       // Hiện Modal
       modal.classList.remove("hidden");
