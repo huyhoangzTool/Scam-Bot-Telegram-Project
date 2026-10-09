@@ -1,7 +1,7 @@
 const { Bot, InlineKeyboard, webhookCallback } = require("grammy");
 
 // Khởi tạo Bot với Token của bạn
-const BOT_TOKEN = "8762214307:AAElMGRe5B9U-wTQjTijFCibZdfgrk1HjY0";
+const process.env.BOT_TOKEN;
 const bot = new Bot(BOT_TOKEN);
 
 // --- 1. Tạo các giao diện Bàn phím (Inline Keyboard) ---
