@@ -57,17 +57,6 @@
       transform: scale(0.98);
       opacity: 0.9;
     }
-
-    /* Modal Animation */
-    .modal-enter {
-      opacity: 0;
-      transform: scale(0.95);
-    }
-    .modal-enter-active {
-      opacity: 1;
-      transform: scale(1);
-      transition: all 0.2s ease-out;
-    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between pb-6">
@@ -175,10 +164,10 @@
 
     // 2. Danh sách Ngân hàng Real & dữ liệu Random
     const bankTypes = [
-      { type: "VIB Digi", logo: "vib.jpg", titlePrefix: "Tài Khoản VIB Thường" },
-      { type: "MB Bank", logo: "mb.jpeg", titlePrefix: "Tài Khoản MB Bank" },
-      { type: "Vietcombank", logo: "vcb.png", titlePrefix: "Tài Khoản Vietcombank" },
-      { type: "Techcombank", logo: "tcb.jpg", titlePrefix: "Tài Khoản Techcombank" }
+      { type: "VIB Digi", logo: "./vib.jpg", titlePrefix: "Tài Khoản VIB Thường" },
+      { type: "MB Bank", logo: "./mb.jpeg", titlePrefix: "Tài Khoản MB Bank" },
+      { type: "Vietcombank", logo: "./vcb.png", titlePrefix: "Tài Khoản Vietcombank" },
+      { type: "Techcombank", logo: "./tcb.jpg", titlePrefix: "Tài Khoản Techcombank" }
     ];
 
     const randomNames = [
@@ -186,9 +175,10 @@
       "TRẦN MINH TUẤN", "LÊ HOÀNG NAM", "TRẦN LÊ NGUYÊN", "PHẠM QUỐC BẢO"
     ];
 
+    // Mảng các file QR của bạn
     const qrFiles = ["IMG_0473.png", "nhh.png", "kn.png"];
 
-    // Hàm tạo số ngẫu nhiên ngàn đồng (VD: 550.000đ)
+    // Hàm tạo giá ngẫu nhiên từ 500.000₫ đến 900.000₫
     function getRandomPrice() {
       const base = Math.floor(Math.random() * 5) + 5; // 500k -> 900k
       return base * 100000;
@@ -197,15 +187,13 @@
     // Render danh sách ô sản phẩm
     const bankListContainer = document.getElementById("bank-list");
     
-    // Tạo 4 ô mẫu sản phẩm
-    bankTypes.forEach((bank, index) => {
+    bankTypes.forEach((bank) => {
       const randomName = randomNames[Math.floor(Math.random() * randomNames.length)];
       const priceVal = getRandomPrice();
       const priceFormatted = priceVal.toLocaleString("vi-VN") + "₫";
 
       const cardHtml = `
         <div class="bg-neutral-900/90 border border-amber-500/20 rounded-2xl p-4 shadow-lg space-y-3">
-          <!-- Logo & Tên Bank -->
           <div class="flex items-center gap-3">
             <img src="${bank.logo}" onerror="this.src='https://via.placeholder.com/50?text=BANK'" class="w-12 h-12 rounded-xl object-contain bg-black p-1 border border-neutral-700 flex-shrink-0" alt="${bank.type}" />
             <div>
@@ -215,7 +203,6 @@
             </div>
           </div>
 
-          <!-- Thông tin Giá & Hạn mức -->
           <div class="bg-neutral-950/80 rounded-xl p-3 border border-neutral-800 flex justify-between items-center text-xs">
             <div>
               <span class="text-neutral-400 block text-[10px]">Giá bán:</span>
@@ -227,7 +214,6 @@
             </div>
           </div>
 
-          <!-- Nút Mua Ngay -->
           <button onclick="openPayment('${priceFormatted}')" class="btn-gold w-full py-2.5 rounded-xl text-sm tracking-wide flex items-center justify-center gap-2">
             🛒 MUA NGAY - ${priceFormatted}
           </button>
@@ -248,21 +234,29 @@
 
       modalAmount.innerText = price;
       
-      // Chon ngẫu nhiên 1 trong 3 mã QR
+      // Chọn ngẫu nhiên 1 trong 3 file QR
       const randomQR = qrFiles[Math.floor(Math.random() * qrFiles.length)];
-      qrImage.src = randomQR;
+      
+      // Thêm đường dẫn ./ để trình duyệt load đúng từ thư mục gốc
+      qrImage.src = "./" + randomQR;
 
-      // Hiện Modal + Reset state
+      // Nếu file bị lỗi (ví dụ do viết hoa/thường tên file), tự thử load lại dạng chữ thường
+      qrImage.onerror = function() {
+        this.onerror = null;
+        this.src = "./" + randomQR.toLowerCase();
+      };
+
+      // Hiện Modal
       modal.classList.remove("hidden");
       loadingState.classList.remove("hidden");
       qrState.classList.add("hidden");
 
-      // Giả lập Loading 1.5 giây
+      // Giả lập Loading 1.2 giây
       setTimeout(() => {
         loadingState.classList.add("hidden");
         qrState.classList.remove("hidden");
-        startTimer(600); // 10 phút = 600 giây
-      }, 1500);
+        startTimer(600); // 10 phút
+      }, 1200);
     }
 
     function startTimer(duration) {
