@@ -2,6 +2,6 @@
   functions = "netlify/functions"
 
 [[redirects]]
-  from = "/api/bot"
-  to = "/.netlify/functions/bot"
+  from = "/api/webhook"
+  to = "/.netlify/functions/update"
   status = 200
