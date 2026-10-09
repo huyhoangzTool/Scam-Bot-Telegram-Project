@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>LuxBank • Store WebApp</title>
+  <!-- SDK Telegram WebApp -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0b0b0d;
+      color: #e5e7eb;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    
+    /* Chữ chữ chạy Ticker Bar Header */
+    .ticker-wrapper {
+      overflow: hidden;
+      white-space: nowrap;
+      background: rgba(20, 20, 25, 0.9);
+      border-bottom: 1px solid rgba(217, 119, 6, 0.2);
+    }
+    .ticker-text {
+      display: inline-block;
+      animation: marquee 22s linear infinite;
+    }
+    @keyframes marquee {
+      0% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+
+    /* Hiệu ứng Text Gold & Gradient */
+    .gold-gradient-text {
+      background: linear-gradient(135deg, #fef08a 0%, #f59e0b 50%, #d97706 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+
+    /* Button Gold Style */
+    .btn-gold {
+      background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+      color: #000;
+      font-weight: 700;
+      box-shadow: 0 4px 14px rgba(217, 119, 6, 0.3);
+      transition: all 0.2s ease;
+    }
+    .btn-gold:active {
+      transform: scale(0.98);
+      opacity: 0.9;
+    }
+
+    /* Modal Animation */
+    .modal-enter {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    .modal-enter-active {
+      opacity: 1;
+      transform: scale(1);
+      transition: all 0.2s ease-out;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between pb-6">
+
+  <!-- 1. HEADER CHỮ CHẠY -->
+  <header class="sticky top-0 z-40 bg-black/80 backdrop-blur-md">
+    <div class="ticker-wrapper py-1.5 px-2">
+      <div id="ticker" class="ticker-text text-xs font-medium text-amber-300">
+        🇻🇳 LIÊN MINH LuxBank - CHUYÊN CUNG CẤP CÁC DỊCH VỤ MMO - UY TÍN - BẢO MẬT - AN TOÀN
+      </div>
+    </div>
+
+    <!-- LOGO & TIÊU ĐỀ WEB -->
+    <div class="p-4 flex items-center gap-3.5 border-b border-neutral-800/80">
+      <img src="https://i.ibb.co/whZxK672/685-CF451-DA11-4077-A7-E3-9-AA7439-E37-D7.png" 
+           alt="LuxBank Logo" 
+           class="w-14 h-14 object-contain rounded-xl bg-neutral-900 border border-amber-500/20 p-1 flex-shrink-0" />
+      <div>
+        <h1 class="text-xl font-bold gold-gradient-text tracking-wide leading-tight">LuxBank • Store</h1>
+        <p class="text-[11px] text-amber-200/70 font-normal leading-snug mt-0.5">
+          Hệ thống chuyên cung cấp Tài khoản Bank nhận tiền MMO - tiền bào KM - tiền nhận hộ
+        </p>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. NỘI DUNG CHÍNH (DANH SÁCH BANK REAL) -->
+  <main class="p-4 space-y-4 max-w-md mx-auto w-full flex-1">
+    <div id="bank-list" class="space-y-4">
+      <!-- Các item Bank Real sẽ được tự động tạo bằng JS -->
+    </div>
+  </main>
+
+  <!-- 3. FOOTER WEB -->
+  <footer class="mt-8 px-4 text-center text-xs text-neutral-400 space-y-2 border-t border-neutral-800/60 pt-4">
+    <p>
+      &copy; 2026 <span class="gold-gradient-text font-semibold">Liên Minh LuxBank</span> - MIỄN TRỪ MỌI TRÁCH NHIỆM NẾU SỬ DỤNG SAI MỤC ĐÍCH VÀ VI PHẠM
+    </p>
+    <div class="flex items-center justify-center gap-4 text-amber-400/80 pt-1 font-medium">
+      <a href="https://t.me/littlehoang" target="_blank" class="hover:underline flex items-center gap-1">
+        <span>✈️ @littlehoang</span>
+      </a>
+      <a href="https://t.me/ThueLuxBank_bot" target="_blank" class="hover:underline flex items-center gap-1">
+        <span>🤖 @ThueLuxBank_bot</span>
+      </a>
+    </div>
+    <p class="text-[10px] tracking-widest text-neutral-500 pt-1">🇻🇳 • 🇨🇳 • 🇰🇭</p>
+  </footer>
+
+  <!-- 4. POPUP THANH TOÁN (MODAL) -->
+  <div id="payment-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden">
+    <div class="bg-neutral-900 border border-amber-500/30 w-full max-w-sm rounded-2xl p-5 text-center shadow-2xl relative overflow-hidden">
+      
+      <!-- TRẠNG THÁI 1: LOADING KHỞI TẠO -->
+      <div id="loading-state" class="py-8 space-y-4">
+        <div class="inline-block w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+        <p class="text-sm font-semibold text-amber-300 tracking-wide">Đang khởi tạo QR Thanh toán...</p>
+      </div>
+
+      <!-- TRẠNG THÁI 2: HIỂN THỊ MÃ QR -->
+      <div id="qr-state" class="hidden space-y-4">
+        <h3 class="text-sm text-neutral-300 font-medium">
+          Vui lòng thanh toán <span id="modal-amount" class="text-emerald-400 italic font-bold text-base">0₫</span>
+        </h3>
+        
+        <!-- Khung chứa QR -->
+        <div class="bg-white p-3 rounded-xl inline-block shadow-inner mx-auto border-2 border-amber-500/40">
+          <img id="qr-image" src="" alt="Mã QR Thanh Toán" class="w-48 h-48 object-contain mx-auto" />
+        </div>
+
+        <p class="text-xs font-semibold text-red-500 flex items-center justify-center gap-1">
+          <span>⏱️</span> Đơn thanh toán sẽ hết hạn sau <span id="countdown-timer">10:00</span>
+        </p>
+
+        <button onclick="closeModal()" class="w-full py-2.5 px-4 bg-neutral-800 hover:bg-neutral-700 text-red-400 font-semibold text-sm rounded-xl border border-red-500/20 active:scale-95 transition-all">
+          ❌ Huỷ đơn thanh toán
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 5. JAVASCRIPT XỬ LÝ DỮ LIỆU & LOGIC -->
+  <script>
+    // Khởi tạo SDK Telegram
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+    }
+
+    // 1. Chữ chạy Header
+    const tickerTexts = [
+      "🇻🇳 LIÊN MINH LuxBank - CHUYÊN CUNG CẤP CÁC DỊCH VỤ MMO - UY TÍN - BẢO MẬT - AN TOÀN",
+      "🇨🇳 LuxBank 联盟——专业提供各类 MMO 服务——信誉——保密——安全",
+      "🇰🇭 សម្ព័ន្ធ LuxBank - អ្នកផ្តល់សេវាកម្ម MMO ជំនាញ - ទំនុកចិត្ត - ការសម្ងាត់ - សុវត្ថិភាព"
+    ];
+    let tickerIndex = 0;
+    const tickerEl = document.getElementById("ticker");
+
+    setInterval(() => {
+      tickerIndex = (tickerIndex + 1) % tickerTexts.length;
+      tickerEl.innerText = tickerTexts[tickerIndex];
+    }, 22000);
+
+    // 2. Danh sách Ngân hàng Real & dữ liệu Random
+    const bankTypes = [
+      { type: "VIB Digi", logo: "vib.jpg", titlePrefix: "Tài Khoản VIB Thường" },
+      { type: "MB Bank", logo: "mb.jpeg", titlePrefix: "Tài Khoản MB Bank" },
+      { type: "Vietcombank", logo: "vcb.png", titlePrefix: "Tài Khoản Vietcombank" },
+      { type: "Techcombank", logo: "tcb.jpg", titlePrefix: "Tài Khoản Techcombank" }
+    ];
+
+    const randomNames = [
+      "NGÔ MINH KHÁNH", "ĐOÀN HUY HOÀNG", "NGUYỄN VĂN HÙNG", 
+      "TRẦN MINH TUẤN", "LÊ HOÀNG NAM", "VƯƠNG VIỆT HOÀNG", "PHẠM QUỐC BẢO"
+    ];
+
+    const qrFiles = ["IMG_0473.png", "nhh.png", "kn.png"];
+
+    // Hàm tạo số ngẫu nhiên ngàn đồng (VD: 550.000đ)
+    function getRandomPrice() {
+      const base = Math.floor(Math.random() * 15) + 5; // 500k -> 2tr
+      return base * 100000;
+    }
+
+    // Render danh sách ô sản phẩm
+    const bankListContainer = document.getElementById("bank-list");
+    
+    // Tạo 4 ô mẫu sản phẩm
+    bankTypes.forEach((bank, index) => {
+      const randomName = randomNames[Math.floor(Math.random() * randomNames.length)];
+      const priceVal = getRandomPrice();
+      const priceFormatted = priceVal.toLocaleString("vi-VN") + "₫";
+
+      const cardHtml = `
+        <div class="bg-neutral-900/90 border border-amber-500/20 rounded-2xl p-4 shadow-lg space-y-3">
+          <!-- Logo & Tên Bank -->
+          <div class="flex items-center gap-3">
+            <img src="${bank.logo}" onerror="this.src='https://via.placeholder.com/50?text=BANK'" class="w-12 h-12 rounded-xl object-contain bg-black p-1 border border-neutral-700 flex-shrink-0" alt="${bank.type}" />
+            <div>
+              <h2 class="text-sm font-bold text-white leading-tight">
+                ${bank.titlePrefix} - ${randomName}
+              </h2>
+            </div>
+          </div>
+
+          <!-- Thông tin Giá & Hạn mức -->
+          <div class="bg-neutral-950/80 rounded-xl p-3 border border-neutral-800 flex justify-between items-center text-xs">
+            <div>
+              <span class="text-neutral-400 block text-[10px]">Giá bán:</span>
+              <span class="text-emerald-400 font-bold text-sm">${priceFormatted}</span>
+            </div>
+            <div class="text-right">
+              <span class="text-neutral-400 block text-[10px]">Hạn mức:</span>
+              <span class="text-amber-400 font-semibold">20.000.000₫ / ngày</span>
+            </div>
+          </div>
+
+          <!-- Nút Mua Ngay -->
+          <button onclick="openPayment('${priceFormatted}')" class="btn-gold w-full py-2.5 rounded-xl text-sm tracking-wide flex items-center justify-center gap-2">
+            🛒 MUA NGAY - ${priceFormatted}
+          </button>
+        </div>
+      `;
+      bankListContainer.insertAdjacentHTML("beforeend", cardHtml);
+    });
+
+    // 3. Logic Popup Thanh Toán
+    let countdownInterval = null;
+
+    function openPayment(price) {
+      const modal = document.getElementById("payment-modal");
+      const loadingState = document.getElementById("loading-state");
+      const qrState = document.getElementById("qr-state");
+      const modalAmount = document.getElementById("modal-amount");
+      const qrImage = document.getElementById("qr-image");
+
+      modalAmount.innerText = price;
+      
+      // Chon ngẫu nhiên 1 trong 3 mã QR
+      const randomQR = qrFiles[Math.floor(Math.random() * qrFiles.length)];
+      qrImage.src = randomQR;
+
+      // Hiện Modal + Reset state
+      modal.classList.remove("hidden");
+      loadingState.classList.remove("hidden");
+      qrState.classList.add("hidden");
+
+      // Giả lập Loading 1.5 giây
+      setTimeout(() => {
+        loadingState.classList.add("hidden");
+        qrState.classList.remove("hidden");
+        startTimer(600); // 10 phút = 600 giây
+      }, 1500);
+    }
+
+    function startTimer(duration) {
+      clearInterval(countdownInterval);
+      let timer = duration;
+      const display = document.getElementById("countdown-timer");
+
+      countdownInterval = setInterval(() => {
+        const minutes = Math.floor(timer / 60);
+        const seconds = timer % 60;
+
+        const mStr = minutes < 10 ? "0" + minutes : minutes;
+        const sStr = seconds < 10 ? "0" + seconds : seconds;
+
+        display.innerText = `${mStr}:${sStr}`;
+
+        if (--timer < 0) {
+          clearInterval(countdownInterval);
+          closeModal();
+        }
+      }, 1000);
+    }
+
+    function closeModal() {
+      clearInterval(countdownInterval);
+      document.getElementById("payment-modal").classList.add("hidden");
+    }
+  </script>
+</body>
+</html>
