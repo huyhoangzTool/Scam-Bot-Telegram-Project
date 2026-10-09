@@ -203,7 +203,7 @@ exports.handler = async (event) => {
 👇Chọn dịch vụ bên dưới hoặc thuê Bank nhận tiền MMO - tiền Bào KM - tiền Scam`;
 
         await sendMessage(chatId, text, shopInlineKeyboard);
-        await sendMessage(chatId, "Bàn phím chọn dịch vụ:", shopKeyboard);
+        await sendMessage(chatId, "Menu:", shopKeyboard);
       }
 
       // 4. Nút "💳 Tạo bank ảo"
