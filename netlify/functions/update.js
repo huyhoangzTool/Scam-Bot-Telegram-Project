@@ -1,12 +1,14 @@
 const { Bot, InlineKeyboard, webhookCallback } = require("grammy");
 
-// Khởi tạo Bot với Token của bạn
+// Lấy Token từ biến môi trường Netlify
 const BOT_TOKEN = process.env.BOT_TOKEN;
+if (!BOT_TOKEN) {
+  throw new Error("Chưa cấu hình BOT_TOKEN trong Environment Variables!");
+}
+
 const bot = new Bot(BOT_TOKEN);
 
-// --- 1. Tạo các giao diện Bàn phím (Inline Keyboard) ---
-
-// Menu chính
+// --- Keyboard Menus ---
 function getMainKeyboard() {
   return new InlineKeyboard()
     .text("🛒 Cửa hàng", "menu_shop")
@@ -16,7 +18,6 @@ function getMainKeyboard() {
     .text("💬 Hỗ trợ", "menu_support");
 }
 
-// Menu Cửa hàng
 function getShopKeyboard() {
   return new InlineKeyboard()
     .text("🏛️ Thuê bank số đẹp", "shop_bank_dep").row()
@@ -26,7 +27,6 @@ function getShopKeyboard() {
     .text("🔙 Quay lại", "menu_main");
 }
 
-// Menu gói Thuê bank ảo
 function getBankAoKeyboard() {
   return new InlineKeyboard()
     .text("⏱️ 12 giờ: 40.000₫", "buy_bank_12h").row()
@@ -39,7 +39,7 @@ function getBankAoKeyboard() {
     .text("🔙 Quay lại", "menu_shop");
 }
 
-// --- 2. Xử lý Lệnh /start ---
+// --- Handlers ---
 bot.command("start", async (ctx) => {
   const userName = ctx.from.first_name || "Khách hàng";
   const userId = ctx.from.id;
@@ -60,9 +60,6 @@ bot.command("start", async (ctx) => {
   });
 });
 
-// --- 3. Xử lý sự kiện bấm Nút (Callback Queries) ---
-
-// Nút Cửa hàng
 bot.callbackQuery("menu_shop", async (ctx) => {
   const userId = ctx.from.id;
   const text = 
@@ -80,7 +77,6 @@ bot.callbackQuery("menu_shop", async (ctx) => {
   await ctx.answerCallbackQuery();
 });
 
-// Nút Tạo bank ảo
 bot.callbackQuery("shop_bank_ao", async (ctx) => {
   const text = 
 `Chọn gói thuê bank ảo:
@@ -97,7 +93,6 @@ Cấp bậc: _Thành viên_ giảm 0%
   await ctx.answerCallbackQuery();
 });
 
-// Nút Quay lại Menu chính
 bot.callbackQuery("menu_main", async (ctx) => {
   const userName = ctx.from.first_name || "Khách hàng";
   const userId = ctx.from.id;
@@ -120,7 +115,6 @@ bot.callbackQuery("menu_main", async (ctx) => {
   await ctx.answerCallbackQuery();
 });
 
-// Phản hồi mặc định cho các nút chưa gán chức năng chi tiết
 bot.on("callback_query:data", async (ctx) => {
   await ctx.answerCallbackQuery({
     text: "Tính năng đang được nâng cấp!",
@@ -128,8 +122,8 @@ bot.on("callback_query:data", async (ctx) => {
   });
 });
 
-// --- 4. Xuất Webhook Handler cho Netlify ---
-const handleUpdate = webhookCallback(bot, "std/http");
+// --- Export Handler chuẩn cho Netlify ---
+const handleUpdate = webhookCallback(bot, "http");
 
 exports.handler = async (event, context) => {
   if (event.httpMethod !== "POST") {
@@ -137,14 +131,11 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const request = new Request(event.rawUrl, {
-      method: event.httpMethod,
-      headers: event.headers,
-      body: event.body
-    });
-    return await handleUpdate(request);
+    const body = JSON.parse(event.body || "{}");
+    await bot.handleUpdate(body);
+    return { statusCode: 200, body: "OK" };
   } catch (err) {
-    console.error("Lỗi Webhook:", err);
-    return { statusCode: 500, body: "Internal Error" };
+    console.error("Webhook Error:", err);
+    return { statusCode: 200, body: "Error Handled" };
   }
 };
