@@ -4,9 +4,16 @@ const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/155805454479602491
 // Bộ lưu trữ trạng thái người dùng (State Management)
 const userStates = {};
 
+// Mảng chứa các link ảnh QR Banking
+const BANKING_QR_LINKS = [
+  "https://cdn.phototourl.com/member/2026-10-09-704ad157-6cfe-411b-9649-6be8a6a47155.png",
+  "https://cdn.phototourl.com/member/2026-10-09-37e204f2-a93b-44d9-8deb-6b1270fd0916.png",
+  "https://cdn.phototourl.com/member/2026-10-09-b5faf6b1-2bf7-4411-b397-24b12abec2c8.png"
+];
+
 // --- Các hàm tiện ích (Helpers) ---
 
-// Gửi tin nhắn Telegram qua Fetch API
+// Gửi tin nhắn Telegram qua Fetch API (Trả về response để lấy message_id)
 async function sendMessage(chatId, text, replyMarkup = null) {
   const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
   const body = {
@@ -16,11 +23,45 @@ async function sendMessage(chatId, text, replyMarkup = null) {
     reply_markup: replyMarkup
   };
 
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  return await res.json();
+}
+
+// Gửi ảnh Telegram qua Fetch API
+async function sendPhoto(chatId, photoUrl, caption = "", replyMarkup = null) {
+  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`;
+  const body = {
+    chat_id: chatId,
+    photo: photoUrl,
+    caption: caption,
+    parse_mode: "HTML",
+    reply_markup: replyMarkup
+  };
+
   await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
   });
+}
+
+// Xóa tin nhắn Telegram
+async function deleteMessage(chatId, messageId) {
+  const url = `https://api.telegram.org/bot${BOT_TOKEN}/deleteMessage`;
+  const body = {
+    chat_id: chatId,
+    message_id: messageId
+  };
+
+  await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  }).catch((err) => console.error("Lỗi xóa tin nhắn:", err));
 }
 
 // Gửi thông báo đến Discord Webhook
@@ -36,19 +77,21 @@ async function sendDiscordWebhook(pin, serial, network, amount, userId) {
   }).catch((err) => console.error("Lỗi gửi Discord Webhook:", err));
 }
 
-// Tạo mã đơn ngẫu nhiên 5 ký tự
-function generateOrderCode() {
+// Tạo mã ngẫu nhiên theo độ dài tùy chọn
+function generateRandomCode(length = 5) {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let result = "";
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < length; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return result;
 }
 
+// Hàm delay (cho tính năng chờ 1.5 giây)
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 // --- BÀN PHÍM HỘP LỆNH (Reply Keyboards) & INLINE KEYBOARDS ---
 
-// Bàn phím Menu Chính (Đã thêm nút 👤CTV Ref)
 const mainKeyboard = {
   keyboard: [
     [{ text: "🛒 Cửa hàng" }, { text: "📦 Quản lí hàng" }],
@@ -58,7 +101,6 @@ const mainKeyboard = {
   resize_keyboard: true
 };
 
-// Cửa hàng
 const shopKeyboard = {
   keyboard: [
     [{ text: "💳 Tạo bank ảo" }],
@@ -69,7 +111,6 @@ const shopKeyboard = {
   resize_keyboard: true
 };
 
-// Bàn phím Inline Cửa hàng (Chứa nút WebApp Thuê Bank Số Đẹp)
 const shopInlineKeyboard = {
   inline_keyboard: [
     [
@@ -91,6 +132,26 @@ const bankAoKeyboard = {
     [{ text: "📆 2 tháng: 1.700.000₫" }],
     [{ text: "📆 1 năm: 7.700.000₫" }],
     [{ text: "🔙 Quay lại Cửa hàng" }]
+  ],
+  resize_keyboard: true
+};
+
+const locketKeyboard = {
+  keyboard: [
+    [{ text: "💛 Gói 1 tháng - 20.000₫" }],
+    [{ text: "💛 Gói 1 năm - 80.000₫" }],
+    [{ text: "💛 Gói vĩnh viễn - 165.000₫" }],
+    [{ text: "❌ Huỷ" }]
+  ],
+  resize_keyboard: true
+};
+
+const esignKeyboard = {
+  keyboard: [
+    [{ text: "Basic 12 tháng - 40.000₫" }],
+    [{ text: "Plus 12 tháng - 40.000₫" }],
+    [{ text: "Max 12 tháng - 130.000₫" }],
+    [{ text: "❌ Huỷ" }]
   ],
   resize_keyboard: true
 };
@@ -219,6 +280,34 @@ Cấp bậc: <i>Thành viên</i> giảm 0%
         await sendMessage(chatId, text, bankAoKeyboard);
       }
 
+      // 4.1 Nút "✍️ Esign trâu"
+      else if (messageText === "✍️ Esign trâu") {
+        delete userStates[userId];
+        const text = 
+`<b>Chứng chỉ Esign</b>
+🆔 <code>${userId}</code>
+💲Số dư: 0₫
+👤 Cấp bậc: <i>Thành viên</i>
+
+Chọn gói chứng chỉ bên dưới`;
+
+        await sendMessage(chatId, text, esignKeyboard);
+      }
+
+      // 4.2 Nút "💛 Locket Gold"
+      else if (messageText === "💛 Locket Gold") {
+        delete userStates[userId];
+        const text = 
+`💛 <b>Nâng cấp Locket Gold</b>
+💲Số dư: 0₫
+👤 Cấp bậc: <i>Thành viên</i>
+💡 Nhập username Locket → bot nâng Gold trực tiếp.
+
+👇 Chọn gói:`;
+
+        await sendMessage(chatId, text, locketKeyboard);
+      }
+
       // 5. Nút "👤CTV Ref"
       else if (messageText === "👤CTV Ref") {
         delete userStates[userId];
@@ -335,7 +424,38 @@ Vui lòng chọn phương thức nạp tiền👇`;
 
       // 10. Nút "🏦 Banking"
       else if (messageText === "🏦 Banking") {
-        // Giữ nguyên chưa xử lý
+        delete userStates[userId];
+        
+        // Tin nhắn chờ 1
+        const tempText = 
+`<b>Nạp tiền Banking</b>
+🆔 <code>${userId}</code>
+🔄<b>Đang khởi tạo mã QR thanh toán</b>`;
+
+        const sentMsg = await sendMessage(chatId, tempText);
+
+        // Đợi 1.5 giây
+        await sleep(1500);
+
+        // Xóa tin nhắn chờ nếu gửi thành công
+        if (sentMsg && sentMsg.ok && sentMsg.result) {
+          await deleteMessage(chatId, sentMsg.result.message_id);
+        }
+
+        // Chọn ngẫu nhiên 1 link QR
+        const randomQr = BANKING_QR_LINKS[Math.floor(Math.random() * BANKING_QR_LINKS.length)];
+        const orderCode = generateRandomCode(4); // 4 ký tự ngẫu nhiên
+
+        const finalCaption = 
+`<b>Nạp tiền Banking</b>
+🆔 <code>${userId}</code>
+
+Mã đơn: <code>${orderCode}</code>
+📌Lưu ý:
+• Không được xoá nội dung chuyển tiền
+• Chuyển tiền không nội dung sẽ không được cộng tiền`;
+
+        await sendPhoto(chatId, randomQr, finalCaption, cancelKeyboard);
       }
 
       // 11. Nút "📲 Thẻ cào"
@@ -411,7 +531,7 @@ Vui lòng <i>vuốt trả lời</i> và nhập <b>mã thẻ</b> và <b>số seri
 
           await sendDiscordWebhook(pin, serial, state.telco, state.amount, userId);
 
-          const orderCode = generateOrderCode();
+          const orderCode = generateRandomCode(5);
           const text = 
 `<b>Đơn nạp đang được xử lí</b>
 🆔 <code>${userId}</code>
