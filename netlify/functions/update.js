@@ -62,7 +62,7 @@ const mainKeyboard = {
 const shopKeyboard = {
   keyboard: [
     [{ text: "💳 Tạo bank ảo" }],
-    [{ text: "📜 Esign trâu" }],
+    [{ text: "✍️ Esign trâu" }],
     [{ text: "💛 Locket Gold" }],
     [{ text: "🔙 Quay lại" }]
   ],
@@ -74,7 +74,7 @@ const shopInlineKeyboard = {
   inline_keyboard: [
     [
       { 
-        text: "🏛️ Thuê bank số đẹp (Mở WebApp)", 
+        text: "🏛️ Thuê Bank Nhận Tiền", 
         web_app: { url: "https://luxbank.netlify.app" } 
       }
     ]
@@ -200,7 +200,7 @@ exports.handler = async (event) => {
 🆔 <code>${userId}</code>
 💲Số dư: 0₫
 
-👇Chọn dịch vụ bên dưới hoặc mở WebApp thuê Bank số đẹp`;
+👇Chọn dịch vụ bên dưới hoặc thuê Bank nhận tiền MMO - tiền Bào KM - tiền Scam`;
 
         await sendMessage(chatId, text, shopInlineKeyboard);
         await sendMessage(chatId, "Bàn phím chọn dịch vụ:", shopKeyboard);
