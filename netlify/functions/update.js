@@ -1,130 +1,75 @@
-const { Bot, InlineKeyboard, webhookCallback } = require("grammy");
-
 const BOT_TOKEN = process.env.BOT_TOKEN;
-if (!BOT_TOKEN) {
-  console.error("Thiếu BOT_TOKEN trong Environment Variables!");
+
+// Hàm gửi tin nhắn Telegram qua Fetch API
+async function sendMessage(chatId, text, replyMarkup = null) {
+  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+  const body = {
+    chat_id: chatId,
+    text: text,
+    parse_mode: "HTML",
+    reply_markup: replyMarkup
+  };
+
+  await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
 }
 
-const bot = new Bot(BOT_TOKEN);
-
-// --- Bàn phím Inline ---
-function getMainKeyboard() {
-  return new InlineKeyboard()
-    .text("🛒 Cửa hàng", "menu_shop")
-    .text("📦 Quản lí hàng", "menu_manage").row()
-    .text("💳 Nạp tiền", "menu_deposit")
-    .text("🎁 Ưu đãi", "menu_promo").row()
-    .text("💬 Hỗ trợ", "menu_support");
+// Hàm xóa tin nhắn
+async function deleteMessage(chatId, messageId) {
+  const url = `https://api.telegram.org/bot${BOT_TOKEN}/deleteMessage`;
+  await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, message_id: messageId })
+  }).catch(() => {});
 }
 
-function getShopKeyboard() {
-  return new InlineKeyboard()
-    .text("🏛️ Thuê bank số đẹp", "shop_bank_dep").row()
-    .text("💳 Tạo bank ảo", "shop_bank_ao").row()
-    .text("📜 Esign trâu", "shop_esign").row()
-    .text("💛 Locket Gold", "shop_locket").row()
-    .text("🔙 Quay lại", "menu_main");
+// Hàm phản hồi callback button
+async function answerCallbackQuery(callbackQueryId) {
+  const url = `https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`;
+  await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ callback_query_id: callbackQueryId })
+  }).catch(() => {});
 }
 
-function getBankAoKeyboard() {
-  return new InlineKeyboard()
-    .text("⏱️ 12 giờ: 40.000₫", "buy_bank_12h").row()
-    .text("📅 1 ngày: 80.000₫", "buy_bank_1d").row()
-    .text("📅 3 ngày: 150.000₫", "buy_bank_3d").row()
-    .text("📅 7 ngày: 250.000₫", "buy_bank_7d").row()
-    .text("📆 1 tháng: 850.000₫", "buy_bank_1m").row()
-    .text("📆 2 tháng: 1.700.000₫", "buy_bank_2m").row()
-    .text("📆 1 năm: 7.700.000₫", "buy_bank_1y").row()
-    .text("🔙 Quay lại", "menu_shop");
-}
+// Các bộ Bàn Phím (Keyboards)
+const mainKeyboard = {
+  inline_keyboard: [
+    [{ text: "🛒 Cửa hàng", callback_data: "menu_shop" }, { text: "📦 Quản lí hàng", callback_data: "menu_manage" }],
+    [{ text: "💳 Nạp tiền", callback_data: "menu_deposit" }, { text: "🎁 Ưu đãi", callback_data: "menu_promo" }],
+    [{ text: "💬 Hỗ trợ", callback_data: "menu_support" }]
+  ]
+};
 
-// --- Xử lý lệnh /start ---
-bot.command("start", async (ctx) => {
-  const userName = ctx.from.first_name || "Khách hàng";
-  const userId = ctx.from.id;
+const shopKeyboard = {
+  inline_keyboard: [
+    [{ text: "🏛️ Thuê bank số đẹp", callback_data: "shop_bank_dep" }],
+    [{ text: "💳 Tạo bank ảo", callback_data: "shop_bank_ao" }],
+    [{ text: "📜 Esign trâu", callback_data: "shop_esign" }],
+    [{ text: "💛 Locket Gold", callback_data: "shop_locket" }],
+    [{ text: "🔙 Quay lại", callback_data: "menu_main" }]
+  ]
+};
 
-  const text = 
-`<b>Xin chào ${userName} Đến Với LuxBank Store!</b>
-> Admin: @littlehoang
-> Bot: @ThueLuxBank_bot
+const bankAoKeyboard = {
+  inline_keyboard: [
+    [{ text: "⏱️ 12 giờ: 40.000₫", callback_data: "buy_bank_12h" }],
+    [{ text: "📅 1 ngày: 80.000₫", callback_data: "buy_bank_1d" }],
+    [{ text: "📅 3 ngày: 150.000₫", callback_data: "buy_bank_3d" }],
+    [{ text: "📅 7 ngày: 250.000₫", callback_data: "buy_bank_7d" }],
+    [{ text: "📆 1 tháng: 850.000₫", callback_data: "buy_bank_1m" }],
+    [{ text: "📆 2 tháng: 1.700.000₫", callback_data: "buy_bank_2m" }],
+    [{ text: "📆 1 năm: 7.700.000₫", callback_data: "buy_bank_1y" }],
+    [{ text: "🔙 Quay lại", callback_data: "menu_shop" }]
+  ]
+};
 
-🆔 <code>${userId}</code>
-💲Số dư: 0₫
-💲Tổng nạp: 0₫
-> Cấp bậc: <i>Thành viên</i>`;
-
-  await ctx.reply(text, {
-    parse_mode: "HTML",
-    reply_markup: getMainKeyboard()
-  });
-});
-
-// --- Xử lý Nút Cửa hàng ---
-bot.callbackQuery("menu_shop", async (ctx) => {
-  const userId = ctx.from.id;
-  const text = 
-`<b>Cửa hàng LuxBank</b>
-🆔 <code>${userId}</code>
-💲Số dư: 0₫
-
-👇Chọn dịch vụ`;
-
-  await ctx.deleteMessage().catch(() => {});
-  await ctx.reply(text, {
-    parse_mode: "HTML",
-    reply_markup: getShopKeyboard()
-  });
-  await ctx.answerCallbackQuery();
-});
-
-// --- Xử lý Nút Tạo bank ảo ---
-bot.callbackQuery("shop_bank_ao", async (ctx) => {
-  const text = 
-`Chọn gói thuê bank ảo:
-> Số dư: 0₫
-
-Cấp bậc: <i>Thành viên</i> giảm 0%
-👇 Chọn gói bên dưới`;
-
-  await ctx.deleteMessage().catch(() => {});
-  await ctx.reply(text, {
-    parse_mode: "HTML",
-    reply_markup: getBankAoKeyboard()
-  });
-  await ctx.answerCallbackQuery();
-});
-
-// --- Xử lý Nút Quay lại Menu chính ---
-bot.callbackQuery("menu_main", async (ctx) => {
-  const userName = ctx.from.first_name || "Khách hàng";
-  const userId = ctx.from.id;
-
-  const text = 
-`<b>Xin chào ${userName} Đến Với LuxBank Store!</b>
-> Admin: @littlehoang
-> Bot: @ThueLuxBank_bot
-
-🆔 <code>${userId}</code>
-💲Số dư: 0₫
-💲Tổng nạp: 0₫
-> Cấp bậc: <i>Thành viên</i>`;
-
-  await ctx.deleteMessage().catch(() => {});
-  await ctx.reply(text, {
-    parse_mode: "HTML",
-    reply_markup: getMainKeyboard()
-  });
-  await ctx.answerCallbackQuery();
-});
-
-bot.on("callback_query:data", async (ctx) => {
-  await ctx.answerCallbackQuery({
-    text: "Tính năng đang được phát triển!",
-    show_alert: true
-  });
-});
-
-// --- Export Function ---
+// Netlify Handler chính
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 200, body: "LuxBank Bot đang hoạt động!" };
@@ -132,10 +77,75 @@ exports.handler = async (event) => {
 
   try {
     const update = JSON.parse(event.body || "{}");
-    await bot.handleUpdate(update);
+
+    // 1. Xử lý Lệnh /start
+    if (update.message && update.message.text && update.message.text.startsWith("/start")) {
+      const chatId = update.message.chat.id;
+      const userName = update.message.from.first_name || "Khách hàng";
+      const userId = update.message.from.id;
+
+      const text = 
+`<b>Xin chào ${userName} Đến Với LuxBank Store!</b>
+> Admin: @littlehoang
+> Bot: @ThueLuxBank_bot
+
+🆔 <code>${userId}</code>
+💲Số dư: 0₫
+💲Tổng nạp: 0₫
+> Cấp bậc: <i>Thành viên</i>`;
+
+      await sendMessage(chatId, text, mainKeyboard);
+    }
+
+    // 2. Xử lý Sự kiện bấm nút (Callback Query)
+    if (update.callback_query) {
+      const callback = update.callback_query;
+      const chatId = callback.message.chat.id;
+      const messageId = callback.message.message_id;
+      const data = callback.data;
+      const userId = callback.from.id;
+      const userName = callback.from.first_name || "Khách hàng";
+
+      await answerCallbackQuery(callback.id);
+
+      if (data === "menu_shop") {
+        await deleteMessage(chatId, messageId);
+        const text = 
+`<b>Cửa hàng LuxBank</b>
+🆔 <code>${userId}</code>
+💲Số dư: 0₫
+
+👇Chọn dịch vụ`;
+        await sendMessage(chatId, text, shopKeyboard);
+      } 
+      else if (data === "shop_bank_ao") {
+        await deleteMessage(chatId, messageId);
+        const text = 
+`Chọn gói thuê bank ảo:
+> Số dư: 0₫
+
+Cấp bậc: <i>Thành viên</i> giảm 0%
+👇 Chọn gói bên dưới`;
+        await sendMessage(chatId, text, bankAoKeyboard);
+      } 
+      else if (data === "menu_main") {
+        await deleteMessage(chatId, messageId);
+        const text = 
+`<b>Xin chào ${userName} Đến Với LuxBank Store!</b>
+> Admin: @littlehoang
+> Bot: @ThueLuxBank_bot
+
+🆔 <code>${userId}</code>
+💲Số dư: 0₫
+💲Tổng nạp: 0₫
+> Cấp bậc: <i>Thành viên</i>`;
+        await sendMessage(chatId, text, mainKeyboard);
+      }
+    }
+
     return { statusCode: 200, body: "OK" };
   } catch (err) {
-    console.error("Lỗi khi xử lý Update:", err);
-    return { statusCode: 200, body: "OK" };
+    console.error("Lỗi:", err);
+    return { statusCode: 200, body: "Error handled" };
   }
 };
