@@ -1,14 +1,13 @@
 const { Bot, InlineKeyboard, webhookCallback } = require("grammy");
 
-// Lấy Token từ biến môi trường Netlify
 const BOT_TOKEN = process.env.BOT_TOKEN;
 if (!BOT_TOKEN) {
-  throw new Error("Chưa cấu hình BOT_TOKEN trong Environment Variables!");
+  console.error("Thiếu BOT_TOKEN trong Environment Variables!");
 }
 
 const bot = new Bot(BOT_TOKEN);
 
-// --- Keyboard Menus ---
+// --- Bàn phím Inline ---
 function getMainKeyboard() {
   return new InlineKeyboard()
     .text("🛒 Cửa hàng", "menu_shop")
@@ -39,77 +38,80 @@ function getBankAoKeyboard() {
     .text("🔙 Quay lại", "menu_shop");
 }
 
-// --- Handlers ---
+// --- Xử lý lệnh /start ---
 bot.command("start", async (ctx) => {
   const userName = ctx.from.first_name || "Khách hàng";
   const userId = ctx.from.id;
 
   const text = 
-`**Xin chào** ${userName} **Đến Với LuxBank Store!**
+`<b>Xin chào ${userName} Đến Với LuxBank Store!</b>
 > Admin: @littlehoang
 > Bot: @ThueLuxBank_bot
 
-🆔 \`${userId}\`
+🆔 <code>${userId}</code>
 💲Số dư: 0₫
 💲Tổng nạp: 0₫
-> Cấp bậc: _Thành viên_`;
+> Cấp bậc: <i>Thành viên</i>`;
 
   await ctx.reply(text, {
-    parse_mode: "Markdown",
+    parse_mode: "HTML",
     reply_markup: getMainKeyboard()
   });
 });
 
+// --- Xử lý Nút Cửa hàng ---
 bot.callbackQuery("menu_shop", async (ctx) => {
   const userId = ctx.from.id;
   const text = 
-`**Cửa hàng LuxBank**
-🆔 \`${userId}\`
+`<b>Cửa hàng LuxBank</b>
+🆔 <code>${userId}</code>
 💲Số dư: 0₫
 
 👇Chọn dịch vụ`;
 
   await ctx.deleteMessage().catch(() => {});
   await ctx.reply(text, {
-    parse_mode: "Markdown",
+    parse_mode: "HTML",
     reply_markup: getShopKeyboard()
   });
   await ctx.answerCallbackQuery();
 });
 
+// --- Xử lý Nút Tạo bank ảo ---
 bot.callbackQuery("shop_bank_ao", async (ctx) => {
   const text = 
 `Chọn gói thuê bank ảo:
 > Số dư: 0₫
 
-Cấp bậc: _Thành viên_ giảm 0%
+Cấp bậc: <i>Thành viên</i> giảm 0%
 👇 Chọn gói bên dưới`;
 
   await ctx.deleteMessage().catch(() => {});
   await ctx.reply(text, {
-    parse_mode: "Markdown",
+    parse_mode: "HTML",
     reply_markup: getBankAoKeyboard()
   });
   await ctx.answerCallbackQuery();
 });
 
+// --- Xử lý Nút Quay lại Menu chính ---
 bot.callbackQuery("menu_main", async (ctx) => {
   const userName = ctx.from.first_name || "Khách hàng";
   const userId = ctx.from.id;
 
   const text = 
-`**Xin chào** ${userName} **Đến Với LuxBank Store!**
+`<b>Xin chào ${userName} Đến Với LuxBank Store!</b>
 > Admin: @littlehoang
 > Bot: @ThueLuxBank_bot
 
-🆔 \`${userId}\`
+🆔 <code>${userId}</code>
 💲Số dư: 0₫
 💲Tổng nạp: 0₫
-> Cấp bậc: _Thành viên_`;
+> Cấp bậc: <i>Thành viên</i>`;
 
   await ctx.deleteMessage().catch(() => {});
   await ctx.reply(text, {
-    parse_mode: "Markdown",
+    parse_mode: "HTML",
     reply_markup: getMainKeyboard()
   });
   await ctx.answerCallbackQuery();
@@ -117,25 +119,23 @@ bot.callbackQuery("menu_main", async (ctx) => {
 
 bot.on("callback_query:data", async (ctx) => {
   await ctx.answerCallbackQuery({
-    text: "Tính năng đang được nâng cấp!",
+    text: "Tính năng đang được phát triển!",
     show_alert: true
   });
 });
 
-// --- Export Handler chuẩn cho Netlify ---
-const handleUpdate = webhookCallback(bot, "http");
-
-exports.handler = async (event, context) => {
+// --- Export Function ---
+exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 200, body: "LuxBank Bot đang hoạt động!" };
   }
 
   try {
-    const body = JSON.parse(event.body || "{}");
-    await bot.handleUpdate(body);
+    const update = JSON.parse(event.body || "{}");
+    await bot.handleUpdate(update);
     return { statusCode: 200, body: "OK" };
   } catch (err) {
-    console.error("Webhook Error:", err);
-    return { statusCode: 200, body: "Error Handled" };
+    console.error("Lỗi khi xử lý Update:", err);
+    return { statusCode: 200, body: "OK" };
   }
 };
