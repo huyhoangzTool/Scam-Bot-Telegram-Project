@@ -99,7 +99,7 @@ const mainKeyboard = {
 const shopKeyboard = {
   keyboard: [
     [{ text: "💳 Tạo bank ảo" }],
-    [{ text: "✍️ Esign trâu" }],
+    [{ text: "✍️ CC Esign" }],
     [{ text: "💛 Locket Gold" }],
     [{ text: "🔙 Quay lại" }]
   ],
@@ -293,11 +293,49 @@ exports.handler = async (event) => {
         await sendMessage(chatId, text, downloadAppInlineKeyboard);
       }
 
-      // 5. Các gói mua trong Cửa hàng -> Trả về lỗi không đủ số dư
+      // 5. Nút "💳 Tạo bank ảo"
+      else if (messageText === "💳 Tạo bank ảo") {
+        delete userStates[userId];
+        const text = 
+`Chọn gói thuê bank ảo:
+> Số dư: 0₫
+
+Cấp bậc: <i>Thành viên</i> giảm 0%
+👇 Chọn gói bên dưới`;
+
+        await sendMessage(chatId, text, bankAoKeyboard);
+      }
+
+      // 5.1 Nút "✍️ CC Esign"
+      else if (messageText === "✍️ CC Esign") {
+        delete userStates[userId];
+        const text = 
+`<b>Chứng chỉ Esign</b>
+🆔 <code>${userId}</code>
+💲Số dư: 0₫
+👤 Cấp bậc: <i>Thành viên</i>
+
+Chọn gói chứng chỉ bên dưới`;
+
+        await sendMessage(chatId, text, esignKeyboard);
+      }
+
+      // 5.2 Nút "💛 Locket Gold"
+      else if (messageText === "💛 Locket Gold") {
+        delete userStates[userId];
+        const text = 
+`💛 <b>Nâng cấp Locket Gold</b>
+💲Số dư: 0₫
+👤 Cấp bậc: <i>Thành viên</i>
+💡 Nhập username Locket → bot nâng Gold trực tiếp.
+
+👇 Chọn gói:`;
+
+        await sendMessage(chatId, text, locketKeyboard);
+      }
+
+      // 5.3 Khi người dùng bấm chọn cụ thể bất kỳ gói sản phẩm nào để thanh toán -> Kiểm tra số dư (báo không đủ)
       else if ([
-        "💳 Tạo bank ảo", 
-        "✍️ Esign", 
-        "💛 Locket Gold",
         "⏱️ 12 giờ: 40.000₫",
         "📅 1 ngày: 80.000₫",
         "📅 3 ngày: 150.000₫",
