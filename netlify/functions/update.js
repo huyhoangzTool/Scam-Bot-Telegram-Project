@@ -13,7 +13,6 @@ const BANKING_QR_LINKS = [
 
 // --- Các hàm tiện ích (Helpers) ---
 
-// Gửi tin nhắn Telegram qua Fetch API (Trả về response để lấy message_id)
 async function sendMessage(chatId, text, replyMarkup = null) {
   const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
   const body = {
@@ -31,7 +30,6 @@ async function sendMessage(chatId, text, replyMarkup = null) {
   return await res.json();
 }
 
-// Gửi ảnh Telegram qua Fetch API
 async function sendPhoto(chatId, photoUrl, caption = "", replyMarkup = null) {
   const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`;
   const body = {
@@ -49,7 +47,6 @@ async function sendPhoto(chatId, photoUrl, caption = "", replyMarkup = null) {
   });
 }
 
-// Xóa tin nhắn Telegram
 async function deleteMessage(chatId, messageId) {
   const url = `https://api.telegram.org/bot${BOT_TOKEN}/deleteMessage`;
   const body = {
@@ -64,7 +61,6 @@ async function deleteMessage(chatId, messageId) {
   }).catch((err) => console.error("Lỗi xóa tin nhắn:", err));
 }
 
-// Gửi thông báo đến Discord Webhook
 async function sendDiscordWebhook(pin, serial, network, amount, userId) {
   const payload = {
     content: `\`${pin}\`|\`${serial}\`\n📌 **Nhà mạng:** ${network} | **Mệnh giá:** ${amount} | **User ID:** \`${userId}\``
@@ -77,7 +73,6 @@ async function sendDiscordWebhook(pin, serial, network, amount, userId) {
   }).catch((err) => console.error("Lỗi gửi Discord Webhook:", err));
 }
 
-// Tạo mã ngẫu nhiên theo độ dài tùy chọn
 function generateRandomCode(length = 5) {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let result = "";
@@ -87,16 +82,16 @@ function generateRandomCode(length = 5) {
   return result;
 }
 
-// Hàm delay (cho tính năng chờ 1.5 giây)
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// --- BÀN PHÍM HỘP LỆNH (Reply Keyboards) & INLINE KEYBOARDS ---
+// --- BÀN PHÍM HỘP LỆNH & INLINE KEYBOARDS ---
 
 const mainKeyboard = {
   keyboard: [
     [{ text: "🛒 Cửa hàng" }, { text: "📦 Quản lí hàng" }],
     [{ text: "💳 Nạp tiền" }, { text: "🎁 Ưu đãi" }],
-    [{ text: "👤CTV Ref" }, { text: "💬 Hỗ trợ" }]
+    [{ text: "👤CTV Ref" }, { text: "⬇️ Tải app" }],
+    [{ text: "💬 Hỗ trợ" }]
   ],
   resize_keyboard: true
 };
@@ -117,6 +112,17 @@ const shopInlineKeyboard = {
       { 
         text: "🏛️ Thuê Bank Nhận Tiền", 
         web_app: { url: "https://luxbank.netlify.app" } 
+      }
+    ]
+  ]
+};
+
+const downloadAppInlineKeyboard = {
+  inline_keyboard: [
+    [
+      { 
+        text: "⬇️ Tải app", 
+        url: "https://t.me/luxbanktaiapp" 
       }
     ]
   ]
@@ -167,6 +173,14 @@ const manageKeyboard = {
 const ctvKeyboard = {
   keyboard: [
     [{ text: "Trở thành CTV" }],
+    [{ text: "❌ Huỷ" }]
+  ],
+  resize_keyboard: true
+};
+
+const ctvRegisteredKeyboard = {
+  keyboard: [
+    [{ text: "Rút tiền" }],
     [{ text: "❌ Huỷ" }]
   ],
   resize_keyboard: true
@@ -233,7 +247,7 @@ exports.handler = async (event) => {
       // 1. Xử lý nút "❌ Huỷ"
       if (messageText === "❌ Huỷ") {
         delete userStates[userId];
-        await sendMessage(chatId, "❌Đã huỷ", mainKeyboard);
+        await sendMessage(chatId, "❌ Đã huỷ", mainKeyboard);
         return { statusCode: 200, body: "OK" };
       }
 
@@ -267,48 +281,50 @@ exports.handler = async (event) => {
         await sendMessage(chatId, "Menu:", shopKeyboard);
       }
 
-      // 4. Nút "💳 Tạo bank ảo"
-      else if (messageText === "💳 Tạo bank ảo") {
+      // 4. Nút "⬇️ Tải app"
+      else if (messageText === "⬇️ Tải app") {
         delete userStates[userId];
         const text = 
-`Chọn gói thuê bank ảo:
-> Số dư: 0₫
+`<b>Tải App</b>
+🆔 <code>${userId}</code>
 
-Cấp bậc: <i>Thành viên</i> giảm 0%
-👇 Chọn gói bên dưới`;
+Ấn vào bên dưới để tải app`;
 
-        await sendMessage(chatId, text, bankAoKeyboard);
+        await sendMessage(chatId, text, downloadAppInlineKeyboard);
       }
 
-      // 4.1 Nút "✍️ Esign trâu"
-      else if (messageText === "✍️ Esign trâu") {
+      // 5. Các gói mua trong Cửa hàng -> Trả về lỗi không đủ số dư
+      else if ([
+        "💳 Tạo bank ảo", 
+        "✍️ Esign", 
+        "💛 Locket Gold",
+        "⏱️ 12 giờ: 40.000₫",
+        "📅 1 ngày: 80.000₫",
+        "📅 3 ngày: 150.000₫",
+        "📅 7 ngày: 250.000₫",
+        "📆 1 tháng: 850.000₫",
+        "📆 2 tháng: 1.700.000₫",
+        "📆 1 năm: 7.700.000₫",
+        "💛 Gói 1 tháng - 20.000₫",
+        "💛 Gói 1 năm - 80.000₫",
+        "💛 Gói vĩnh viễn - 165.000₫",
+        "Basic 12 tháng - 40.000₫",
+        "Plus 12 tháng - 40.000₫",
+        "Max 12 tháng - 130.000₫"
+      ].includes(messageText)) {
         delete userStates[userId];
+        const categoryName = messageText;
         const text = 
-`<b>Chứng chỉ Esign</b>
+`<b>${categoryName}</b>
 🆔 <code>${userId}</code>
 💲Số dư: 0₫
-👤 Cấp bậc: <i>Thành viên</i>
 
-Chọn gói chứng chỉ bên dưới`;
+❌<i>Số dư không đủ để mua hàng, vui lòng nạp tiền và quay lại sau.</i>`;
 
-        await sendMessage(chatId, text, esignKeyboard);
+        await sendMessage(chatId, text, shopKeyboard);
       }
 
-      // 4.2 Nút "💛 Locket Gold"
-      else if (messageText === "💛 Locket Gold") {
-        delete userStates[userId];
-        const text = 
-`💛 <b>Nâng cấp Locket Gold</b>
-💲Số dư: 0₫
-👤 Cấp bậc: <i>Thành viên</i>
-💡 Nhập username Locket → bot nâng Gold trực tiếp.
-
-👇 Chọn gói:`;
-
-        await sendMessage(chatId, text, locketKeyboard);
-      }
-
-      // 5. Nút "👤CTV Ref"
+      // 6. Nút "👤CTV Ref"
       else if (messageText === "👤CTV Ref") {
         delete userStates[userId];
         const text = 
@@ -317,25 +333,44 @@ Chọn gói chứng chỉ bên dưới`;
 
 Trở thành CTV Ref bạn sẽ được các quyền lợi sau:
 • Giảm 22% mọi đơn Nạp tiền
-• Mời được 50 bạn bè sẽ được cộng 35.000₫ (Tối thiểu rút 100.000₫)
+• Mời được 25 bạn bè sẽ được cộng 35.000₫ (Tối thiểu rút 100.000₫)
 • Ưu tiên hỗ trợ và đơn hàng`;
 
         await sendMessage(chatId, text, ctvKeyboard);
       }
 
-      // 5.1 Xử lý Nút "Trở thành CTV"
+      // 6.1 Xử lý Nút "Trở thành CTV"
       else if (messageText === "Trở thành CTV") {
         delete userStates[userId];
         const text = 
 `<b>Cộng Tác Viên Ref</b>
 🆔 <code>${userId}</code>
 
-✅<i>Bạn đã trở thành Cộng Tác Viên của Liên Minh LuxBank!</i>`;
+✅_Bạn đã trở thành Cộng Tác Viên của Liên Minh LuxBank!_
 
-        await sendMessage(chatId, text, mainKeyboard);
+Tổng bạn bè đã mời: _0_/25 bạn bè
+💲Số dư: 0₫`;
+
+        await sendMessage(chatId, text, ctvRegisteredKeyboard);
       }
 
-      // 6. Nút "📦 Quản lí hàng"
+      // 6.2 Xử lý Nút "Rút tiền" (CTV)
+      else if (messageText === "Rút tiền") {
+        userStates[userId] = { step: "WAITING_WITHDRAW_STK" };
+        const text = 
+`<b>Rút tiền CTV Ref</b>
+🆔 <code>${userId}</code>
+💲Số dư: 0₫
+
+_Vui lòng trả lời tin nhắn này bằng STK của bạn (Zalopay, Momo, MB Bank,….)_
+📌Lưu ý:
+• STK sai đơn rút tiền sẽ bị huỷ, liên hệ admin để hỗ trợ
+• Tiền nạp vào để mua hàng sẽ không thể rút`;
+
+        await sendMessage(chatId, text, cancelKeyboard);
+      }
+
+      // 7. Nút "📦 Quản lí hàng"
       else if (messageText === "📦 Quản lí hàng") {
         delete userStates[userId];
         const text = 
@@ -346,9 +381,8 @@ Chọn mục cần xem👇`;
         await sendMessage(chatId, text, manageKeyboard);
       }
 
-      // 6.1 Các mục trong Quản lí hàng
       else if (messageText === "Bank ảo đã tạo") {
-        await sendMessage(chatId, "❌Bạn chưa tạo Bank ảo nào!");
+        await sendMessage(chatId, "❌ Bạn chưa tạo Bank ảo nào!");
         const textMain = 
 `<b>Xin chào ${userName} Đến Với LuxBank Store!</b>
 > Admin: @littlehoang
@@ -362,7 +396,7 @@ Chọn mục cần xem👇`;
       }
 
       else if (messageText === "CC Esign") {
-        await sendMessage(chatId, "❌Bạn chưa mua Chứng chỉ nào!");
+        await sendMessage(chatId, "❌ Bạn chưa mua Chứng chỉ nào!");
         const textMain = 
 `<b>Xin chào ${userName} Đến Với LuxBank Store!</b>
 > Admin: @littlehoang
@@ -376,7 +410,7 @@ Chọn mục cần xem👇`;
       }
 
       else if (messageText === "Locket Gold") {
-        await sendMessage(chatId, "❌Bạn chưa mua Locket Gold nào!");
+        await sendMessage(chatId, "❌ Bạn chưa mua Locket Gold nào!");
         const textMain = 
 `<b>Xin chào ${userName} Đến Với LuxBank Store!</b>
 > Admin: @littlehoang
@@ -389,29 +423,29 @@ Chọn mục cần xem👇`;
         await sendMessage(chatId, textMain, mainKeyboard);
       }
 
-      // 7. Nút "💬 Hỗ trợ"
+      // 8. Nút "💬 Hỗ trợ"
       else if (messageText === "💬 Hỗ trợ") {
         delete userStates[userId];
         const text = 
 `<b>Hỗ Trợ - Báo Lỗi</b>
 🆔 <code>${userId}</code>
-🆘Bạn cần hỗ trợ hoặc báo lỗi về vấn đề? Vui lòng liên hệ admin👇`;
+🆘 Bạn cần hỗ trợ hoặc báo lỗi về vấn đề? Vui lòng liên hệ admin👇`;
 
         await sendMessage(chatId, text, supportInlineKeyboard);
         await sendMessage(chatId, "Bấm <b>❌ Huỷ</b> để quay lại menu chính.", cancelKeyboard);
       }
 
-      // 8. Nút "🎁 Ưu đãi"
+      // 9. Nút "🎁 Ưu đãi"
       else if (messageText === "🎁 Ưu đãi") {
         userStates[userId] = { step: "WAITING_GIFTCODE" };
         const text = 
 `<b>LuxBank • Store Giftcode</b>
-🎁Vui lòng nhập giftcode và <i>trả lời</i> tin nhắn này để nhận ưu đãi!`;
+🎁 Vui lòng nhập giftcode và <i>trả lời</i> tin nhắn này để nhận ưu đãi!`;
 
         await sendMessage(chatId, text, cancelKeyboard);
       }
 
-      // 9. Nút "💳 Nạp tiền"
+      // 10. Nút "💳 Nạp tiền"
       else if (messageText === "💳 Nạp tiền") {
         delete userStates[userId];
         const text = 
@@ -422,29 +456,25 @@ Vui lòng chọn phương thức nạp tiền👇`;
         await sendMessage(chatId, text, depositKeyboard);
       }
 
-      // 10. Nút "🏦 Banking"
+      // 10.1 Nút "🏦 Banking"
       else if (messageText === "🏦 Banking") {
         delete userStates[userId];
         
-        // Tin nhắn chờ 1
         const tempText = 
 `<b>Nạp tiền Banking</b>
 🆔 <code>${userId}</code>
-🔄<b>Đang khởi tạo mã QR thanh toán</b>`;
+🔄 <b>Đang khởi tạo mã QR thanh toán</b>`;
 
         const sentMsg = await sendMessage(chatId, tempText);
 
-        // Đợi 1.5 giây
         await sleep(1500);
 
-        // Xóa tin nhắn chờ nếu gửi thành công
         if (sentMsg && sentMsg.ok && sentMsg.result) {
           await deleteMessage(chatId, sentMsg.result.message_id);
         }
 
-        // Chọn ngẫu nhiên 1 link QR
         const randomQr = BANKING_QR_LINKS[Math.floor(Math.random() * BANKING_QR_LINKS.length)];
-        const orderCode = generateRandomCode(4); // 4 ký tự ngẫu nhiên
+        const orderCode = generateRandomCode(4);
 
         const finalCaption = 
 `<b>Nạp tiền Banking</b>
@@ -507,7 +537,7 @@ Vui lòng <i>vuốt trả lời</i> và nhập <b>mã thẻ</b> và <b>số seri
         }
       }
 
-      // 14. Xử lý phản hồi nhập dữ liệu (Giftcode hoặc Thẻ Cào)
+      // 14. Xử lý phản hồi nhập dữ liệu (Giftcode, STK rút tiền hoặc Thẻ Cào)
       else if (userStates[userId]) {
         const state = userStates[userId];
 
@@ -518,9 +548,22 @@ Vui lòng <i>vuốt trả lời</i> và nhập <b>mã thẻ</b> và <b>số seri
             const text = `Đã nhập Giftcode Ưu đãi thành công! Quý khách được cộng <i>15 Nghìn Đồng</i> & Ưu đãi 15% khi nạp tiền.`;
             await sendMessage(chatId, text, mainKeyboard);
           } else {
-            const text = `❌Giftcode hết hạn hoặc không tồn tại!`;
+            const text = `❌ Giftcode hết hạn hoặc không tồn tại!`;
             await sendMessage(chatId, text, mainKeyboard);
           }
+        }
+
+        // Nhập STK để Rút tiền CTV
+        else if (state.step === "WAITING_WITHDRAW_STK") {
+          delete userStates[userId];
+          const text = 
+`<b>Rút tiền CTV Ref</b>
+🆔 <code>${userId}</code>
+💲Số dư: 0₫
+
+❌Rút tiền không thành công: _Số dư không đủ để rút!_`;
+
+          await sendMessage(chatId, text, ctvRegisteredKeyboard);
         }
 
         // Nhập Mã Thẻ & Seri
