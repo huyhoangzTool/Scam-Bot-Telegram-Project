@@ -172,8 +172,20 @@
 
     const randomNames = [
       "NGÔ MINH KHÁNH", "ĐOÀN TRIỆU DUY", "NGUYỄN VĂN HÙNG", 
-      "TRẦN MINH TUẤN", "LÊ HOÀNG NAM", "TRẦN LÊ NGUYÊN", "PHẠM QUỐC BẢO", "LÊ THỊ HỒNG NHUNG", "VŨ ĐÌNH ANH", "LÊ NGỌC ANH KIÊN", "NGUYỄN NGỌC TẤN PHÚC", "NGUYỄN MINH ANH HOÀNG", "VÕ NHẬT DUY", "TRẦN LÊ NHƯ QUỲNH"
+      "TRẦN MINH TUẤN", "LÊ HOÀNG NAM", "TRẦN LÊ NGUYÊN", "PHẠM QUỐC BẢO", 
+      "LÊ THỊ HỒNG NHUNG", "VŨ ĐÌNH ANH", "LÊ NGỌC ANH KIÊN", 
+      "NGUYỄN NGỌC TẤN PHÚC", "NGUYỄN MINH ANH HOÀNG", "VÕ NHẬT DUY", "TRẦN LÊ NHƯ QUỲNH"
     ];
+
+    // Hàm xáo trộn mảng ngẫu nhiên (Fisher-Yates Shuffle)
+    function shuffleArray(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
 
     // Các tên file QR có thể xảy ra
     const qrGroups = [
@@ -188,11 +200,12 @@
       return base * 100000;
     }
 
-    // Render danh sách ô sản phẩm
+    // Render danh sách ô sản phẩm với tên không bị trùng lặp
     const bankListContainer = document.getElementById("bank-list");
+    const shuffledNames = shuffleArray(randomNames);
     
-    bankTypes.forEach((bank) => {
-      const randomName = randomNames[Math.floor(Math.random() * randomNames.length)];
+    bankTypes.forEach((bank, index) => {
+      const randomName = shuffledNames[index % shuffledNames.length];
       const priceVal = getRandomPrice();
       const priceFormatted = priceVal.toLocaleString("vi-VN") + "₫";
 
